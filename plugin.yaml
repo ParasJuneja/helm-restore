@@ -1,0 +1,8 @@
+name: "restore"
+version: "0.1.0"
+usage: "Restore Chart to last released state"
+description: "Restore Chart to last released state"
+command: "$HELM_PLUGIN_DIR/bin/restore"
+hooks:
+  install: "$HELM_PLUGIN_DIR/install.sh"
+  update: "$HELM_PLUGIN_DIR/install.sh"
