@@ -12,10 +12,10 @@ import (
 
 func Restore(releaseName string) error {
 	err, releaseInfo := utils.GetRelease(releaseName)
-	releaseNamespace := releaseInfo.Namespace
 	if err != nil {
 		return err
 	}
+	releaseNamespace := releaseInfo.Namespace
 	resources := strings.Split(releaseInfo.Manifest, "---")
 	data := make(map[interface{}]interface{})
 	for _, resource := range resources {

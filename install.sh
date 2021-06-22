@@ -1,11 +1,12 @@
 # Go to the plugin dir
 cd "$HELM_PLUGIN_DIR" || exit
+pwd
 
 # Fetch the version
 version="$(grep "version" plugin.yaml | cut -d '"' -f 2)"
 
 # set the url of the tar.gz
-url="https://github.com/ParasJuneja/helm-restore/release/download/v${version}/helm-restore_${version}.tar.gz"
+url="https://github.com/ParasJuneja/helm-restore/releases/download/v${version}/helm-restore_${version}.tar.gz"
 
 # set the filename
 filename=$(echo "${url}" | sed -e "s/^.*\///g")
@@ -24,6 +25,3 @@ fi
 
 # extract the plugin binary into the bin dir
 rm -rf bin && mkdir bin && tar xzvf "$filename" -C bin > /dev/null && rm -f "$filename"
-
-# Go back to original directory
-pushd || exit
