@@ -10,6 +10,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type Y map[interface{}]interface{}
+
 func Restore(releaseName string) error {
 	err, releaseInfo := utils.GetRelease(releaseName)
 	if err != nil {
@@ -17,14 +19,16 @@ func Restore(releaseName string) error {
 	}
 	releaseNamespace := releaseInfo.Namespace
 	resources := strings.Split(releaseInfo.Manifest, "---")
-	data := make(map[interface{}]interface{})
 	for _, resource := range resources {
+		data := make(Y)
 		if err := yaml.Unmarshal([]byte(resource), &data); err != nil {
 			return err
 		}
 		if resource != "" {
-			name := data["metadata"].(map[interface{}]interface{})["name"]
-			namespace := data["metadata"].(map[interface{}]interface{})["namespace"]
+			kind := data["kind"].(string)
+			name := data["metadata"].(Y)["name"]
+			namespace := data["metadata"].(Y)["namespace"]
+			operation := "replace"
 			if name != nil {
 				name = name.(string)
 			} else {
@@ -35,13 +39,16 @@ func Restore(releaseName string) error {
 			} else {
 				namespace = releaseNamespace
 			}
-			if data["kind"] == "Service" {
+			//fmt.Println(resource)
+			if kind == "Service" {
 				getClusterIP := exec.Command("kubectl", "get", "service", name.(string), "-n", namespace.(string), "-o", "jsonpath='{.spec.clusterIP}'")
 				clusterIP, err := getClusterIP.Output()
 				if err != nil {
 					return err
 				}
-				data["spec"].(map[interface{}]interface{})["clusterIP"] = strings.ReplaceAll(string(clusterIP), "'", "")
+				data["spec"].(Y)["clusterIP"] = strings.ReplaceAll(string(clusterIP), "'", "")
+			} else if data["kind"] == "PersistentVolumeClaim" {
+				operation = "apply"
 			}
 			d, err := yaml.Marshal(data)
 			if err != nil {
@@ -52,15 +59,16 @@ func Restore(releaseName string) error {
 				return err
 			}
 
-			commandToExecute := exec.Command("kubectl", "replace", "-f", "/tmp/manifest.yaml", "-n", namespace.(string))
+			commandToExecute := exec.Command("kubectl", operation, "-f", "/tmp/manifest.yaml", "-n", namespace.(string))
 			commandToExecute.Stdout = os.Stdout
 			commandToExecute.Stderr = os.Stderr
 			if err := commandToExecute.Run(); err != nil {
 				return err
 			}
-
 		}
 	}
-	os.Remove("/tmp/manifest.yaml")
+	if err := os.Remove("/tmp/manifest.yaml"); err != nil {
+		return err
+	}
 	return nil
 }
